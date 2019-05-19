@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+
+  keycloak:
+     image: jboss/keycloak:4.0.0.Final
+     restart: on-failure
+     command:
+      - "-b"
+      - "0.0.0.0"
+      - "-Dkeycloak.import=/config/kibanarealm.json"
+     volumes:
+       - ./config:/config/
+     environment:
+       - KEYCLOAK_USER=admin
+       - KEYCLOAK_PASSWORD=password
+       - DB_VENDOR=postgres
+       - DB_USER=admin
+       - DB_PASSWORD=password
+       - DB_ADDR=keycloak-db
+       - DB_PORT=5432
+       - DB_DATABASE=keycloakdb
+     ports:
+       - "8080:8080"
+     depends_on:
+       - keycloak-db
+
+  keycloak-db:
+    image: postgres:10
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: keycloakdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.6.1
+      container_name: elasticsearch
+      environment: ['http.host=0.0.0.0', 'transport.host=127.0.0.1', 'ELASTIC_PASSWORD=elastic']
+
+  kibana:
+      build: ./kibana
+      container_name: kibana
+      environment:
+        - ELASTICSEARCH_USERNAME=elasticsearch
+        - ELASTICSEARCH_PASSWORD=elastic
+        - ELASTICSEARCH_HOST=elasticsearch
+        - ELASTICSEARCH_PORT=9200
+      depends_on: ['elasticsearch']
+      ports:
+        - "5601:5601"
+      depends_on:
+        - keycloak
+
+volumes:
+  pgdata:

@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+
+  keycloak:
+    image: jboss/keycloak:4.0.0.Final
+    restart: on-failure
+    command:
+    - "-b"
+    - "0.0.0.0"
+    - "-Dkeycloak.import=/config/grafanarealm.json"
+    volumes:
+      - ./config:/config/
+    environment:
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=password
+      - DB_VENDOR=postgres
+      - DB_USER=admin
+      - DB_PASSWORD=password
+      - DB_ADDR=keycloak-db
+      - DB_PORT=5432
+      - DB_DATABASE=keycloakdb
+    ports:
+      - "8080:8080"
+    depends_on:
+      - keycloak-db
+
+  keycloak-db:
+    image: postgres:10
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: keycloakdb
+    volumes:
+      - grafanadata:/var/lib/postgresql/data
+
+  grafana:
+    build: ./grafana
+    restart: on-failure
+    ports:
+      - "3000:3000"
+    depends_on:
+      - keycloak-db
+      - keycloak
+
+volumes:
+  grafanadata:
